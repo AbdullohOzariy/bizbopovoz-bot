@@ -91,7 +91,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_id = update.effective_user.id
-        member = await context.bot.get_chat_member("@bizbop_ovoz", user_id)
+        member = await context.bot.get_chat_member("@BozorovPersonal", user_id)
         return member.status in ["member", "administrator", "creator"]
     except:
         return False
