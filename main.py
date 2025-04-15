@@ -14,7 +14,6 @@ if not encoded:
 with open("credentials.json", "wb") as f:
     f.write(base64.b64decode(encoded))
 
-# Bot dependencies
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     ApplicationBuilder, ContextTypes, CommandHandler,
@@ -24,18 +23,10 @@ from telegram.ext import (
 schools = [f"Maktab {i}" for i in range(1, 10)]
 user_votes = {}
 
-NAME, SURNAME, PHONE, VOTE = range(4)
+NAME, SURNAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(5)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from sheets import has_voted
     user_id = update.effective_user.id
-
-    is_subscribed = await check_subscription(update, context)
-    if not is_subscribed:
-        await update.message.reply_text(
-            "❗️Ovoz berishdan oldin kanalga a’zo bo‘ling:\n👉 https://t.me/bizbop_ovoz"
-        )
-        return ConversationHandler.END
 
     if user_id in user_votes:
         await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
@@ -59,14 +50,39 @@ async def get_surname(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from sheets import has_voted
     phone = update.message.contact.phone_number
+
     if has_voted(phone):
-        await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
+        await update.message.reply_text("❗️Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
     context.user_data["phone"] = phone
-    markup = ReplyKeyboardMarkup([[s] for s in schools], resize_keyboard=True, one_time_keyboard=True)
-    await update.message.reply_text("Qaysi maktabga ovoz bermoqchisiz?", reply_markup=markup)
-    return VOTE
+    btn = KeyboardButton("✅ Obuna bo‘ldim")
+    markup = ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
+    await update.message.reply_text(
+        "📢 Endi bizning kanalga a'zo bo‘ling:\n👉 https://t.me/BozorovPersonal\n\nA'zo bo‘lganingizdan so‘ng pastdagi tugmani bosing:",
+        reply_markup=markup
+    )
+    return CHECK_SUBSCRIPTION
+
+async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    try:
+        member = await context.bot.get_chat_member("@BozorovPersonal", user_id)
+        if member.status not in ["member", "administrator", "creator"]:
+            raise Exception("Not subscribed")
+
+        markup = ReplyKeyboardMarkup([[s] for s in schools], resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text("✅ Obuna tasdiqlandi! Endi qaysi maktabga ovoz bermoqchisiz?", reply_markup=markup)
+        return VOTE
+
+    except:
+        btn = KeyboardButton("✅ Obuna bo‘ldim")
+        markup = ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text(
+            "❗️Siz hali kanalga a'zo emassiz!\n👉 https://t.me/BozorovPersonal\n\nA'zo bo‘lib, pastdagi tugmani bosing:",
+            reply_markup=markup
+        )
+        return CHECK_SUBSCRIPTION
 
 async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from sheets import add_vote
@@ -88,14 +104,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "📊 Statistikalar:\n\n" + "\n".join(f"🏫 {k}: {v} ta ovoz" for k, v in s.items())
     await update.message.reply_text(text)
 
-async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user_id = update.effective_user.id
-        member = await context.bot.get_chat_member("@BozorovPersonal", user_id)
-        return member.status in ["member", "administrator", "creator"]
-    except:
-        return False
-
 if __name__ == "__main__":
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
     if not BOT_TOKEN:
@@ -109,6 +117,7 @@ if __name__ == "__main__":
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
             SURNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_surname)],
             PHONE: [MessageHandler(filters.CONTACT, get_phone)],
+            CHECK_SUBSCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, check_subscription_step)],
             VOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_vote)],
         },
         fallbacks=[]
