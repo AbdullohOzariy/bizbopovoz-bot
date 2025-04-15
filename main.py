@@ -23,25 +23,22 @@ from telegram.ext import (
 schools = [f"Maktab {i}" for i in range(1, 10)]
 user_votes = {}
 
-NAME, SURNAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(5)
+NAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if user_id in user_votes:
-        await update.message.reply_text("Assalamu alaykum! Hurmatli foydalanuvhchi! Siz allaqachon ovoz bergansiz.")
+        await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
-    await update.message.reply_text("Assalamu alykum, Hurmatli mijoz! Sizni Bizbop Maktab loyihamizda ko'rib turganimizdan xursandmiz!/n/nIsmingizni kiriting:")
+    await update.message.reply_text(
+        "👋 Assalomu alaykum! Bizbop Ovoz botiga xush kelibsiz!\n\nOvoz berish uchun avval ismingizni kiriting:"
+    )
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
-    await update.message.reply_text("Familiyangizni kiriting:")
-    return SURNAME
-
-async def get_surname(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["surname"] = update.message.text
     btn = KeyboardButton("📞 Kontakt yuborish", request_contact=True)
     markup = ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
     await update.message.reply_text("Telefon raqamingizni yuboring:", reply_markup=markup)
@@ -102,14 +99,13 @@ async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     school = update.message.text
     name = context.user_data["name"]
-    surname = context.user_data["surname"]
     phone = context.user_data["phone"]
 
-    add_vote(name, surname, phone, school)
+    add_vote(name, "-", phone, school)
     user_votes[user_id] = school
 
     await update.message.reply_text(
-        f"✅ Siz {school} uchun ovoz berdingiz. Rahmat!",
+        f"✅ Siz {school} uchun muvaffaqiyatli ovoz berdingiz!\n\nBiz sizning fikringizni qadrlaymiz va bunday faol ishtirokingizdan mamnunmiz.\n📊 Endi statistikani quyidagi tugma orqali kuzatib borishingiz mumkin:",
         reply_markup=ReplyKeyboardMarkup([["📊 Statistika"]], resize_keyboard=True, one_time_keyboard=True)
     )
     return ConversationHandler.END
@@ -131,7 +127,6 @@ if __name__ == "__main__":
         entry_points=[CommandHandler("start", start)],
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-            SURNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_surname)],
             PHONE: [MessageHandler(filters.CONTACT, get_phone)],
             CHECK_SUBSCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, check_subscription_step)],
             VOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_vote)],
