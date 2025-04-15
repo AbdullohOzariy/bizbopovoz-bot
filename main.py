@@ -1,6 +1,7 @@
 import os
 import base64
 from dotenv import load_dotenv
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Load .env environment variables (Railway variables)
 load_dotenv()
@@ -56,13 +57,22 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     context.user_data["phone"] = phone
-    btn = KeyboardButton("✅ Obuna bo‘ldim")
-    markup = ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
+
+    # Inline tugma
+    button = InlineKeyboardButton("📢 Kanalga a'zo bo‘lish", url="https://t.me/BozorovPersonal")
+    keyboard = InlineKeyboardMarkup([[button]])
+
     await update.message.reply_text(
-        "📢 Endi bizning kanalga a'zo bo‘ling:\n👉 https://t.me/BozorovPersonal\n\nA'zo bo‘lganingizdan so‘ng pastdagi tugmani bosing:",
-        reply_markup=markup
+        "📢 Endi bizning kanalga a'zo bo‘ling:\n👇 Quyidagi tugmani bosing:",
+        reply_markup=keyboard
+    )
+
+    await update.message.reply_text(
+        "✅ Obuna bo‘lib bo‘lgan bo‘lsangiz, pastdagi tugmani bosing:",
+        reply_markup=ReplyKeyboardMarkup([["✅ Obuna bo‘ldim"]], resize_keyboard=True, one_time_keyboard=True)
     )
     return CHECK_SUBSCRIPTION
+
 
 async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -71,7 +81,12 @@ async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_
         if member.status not in ["member", "administrator", "creator"]:
             raise Exception("Not subscribed")
 
-        markup = ReplyKeyboardMarkup([[s] for s in schools], resize_keyboard=True, one_time_keyboard=True)
+        markup = ReplyKeyboardMarkup(
+            [schools[i:i+3] for i in range(0, len(schools), 3)],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+
         await update.message.reply_text("✅ Obuna tasdiqlandi! Endi qaysi maktabga ovoz bermoqchisiz?", reply_markup=markup)
         return VOTE
 
@@ -101,8 +116,11 @@ async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from sheets import get_stats
     s = get_stats()
-    text = "📊 Statistikalar:\n\n" + "\n".join(f"🏫 {k}: {v} ta ovoz" for k, v in s.items())
-    await update.message.reply_text(text)
+    text = "📊 <b>Hozirgi ovoz berish statistikasi:</b>\n\n"
+    for school, count in s.items():
+        text += f"🏫 <b>{school}</b>: <code>{count}</code> ta ovoz\n"
+    await update.message.reply_text(text, parse_mode="HTML")
+
 
 if __name__ == "__main__":
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
