@@ -5,6 +5,7 @@ import base64
 from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import matplotlib.pyplot as plt
 
 # Faylni yo'qligini tekshirib, credentials.json ni yozamiz
 if not os.path.exists("credentials.json") and "SHEETS_CREDENTIALS_JSON" in os.environ:
@@ -31,3 +32,19 @@ def get_stats():
 def has_voted(phone):
     phone_column = sheet.col_values(3)[1:]
     return phone in phone_column
+
+def generate_stats_chart(path="stats_chart.png"):
+    stats = get_stats()
+    labels = list(stats.keys())
+    counts = list(stats.values())
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(labels, counts, color='skyblue')
+    plt.title("Maktablar bo‘yicha ovozlar")
+    plt.xlabel("Maktab")
+    plt.ylabel("Ovozlar soni")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()
+    return path
