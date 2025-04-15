@@ -1,41 +1,35 @@
-import os
-import base64
+import os, base64
 
-if not os.path.exists("credentials.json") and "SHEETS_CREDENTIALS_JSON" in os.environ:
-    with open("credentials.json", "wb") as f:
-        f.write(base64.b64decode(os.environ["SHEETS_CREDENTIALS_JSON"]))
+# Faylni doim yozib qo‘yamiz
+with open("credentials.json", "wb") as f:
+    f.write(base64.b64decode(os.environ["SHEETS_CREDENTIALS_JSON"]))
 
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
-from sheets import add_vote, get_stats, has_voted
 
+# 🧠 Sheets importni pasroqda qilamiz (kechiktirib)
+# FUNKSIYALARNING ichida import qilamiz
 
-schools = [
-    "Maktab 1", "Maktab 2", "Maktab 3", "Maktab 4", "Maktab 5",
-    "Maktab 6", "Maktab 7", "Maktab 8", "Maktab 9"
-]
-
+schools = [f"Maktab {i}" for i in range(1, 10)]
 user_votes = {}
 
 NAME, SURNAME, PHONE, VOTE = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from sheets import has_voted  # kechiktirilgan import
     user_id = update.effective_user.id
 
     is_subscribed = await check_subscription(update, context)
     if not is_subscribed:
-        await update.message.reply_text(
-            "❗️Ovoz berishdan oldin kanalimizga obuna bo‘lishingiz kerak:\n👉 https://t.me/bizbop_ovoz"
-        )
+        await update.message.reply_text("❗️Avval kanalga a’zo bo‘ling: https://t.me/bizbop_ovoz")
         return ConversationHandler.END
 
     if user_id in user_votes:
-        await update.message.reply_text("Siz allaqachon ovoz bergansiz. Rahmat!")
+        await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
     await update.message.reply_text("Ismingizni kiriting:")
     return NAME
-
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
@@ -44,17 +38,16 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_surname(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["surname"] = update.message.text
-    contact_btn = KeyboardButton("📞 Kontakt yuborish", request_contact=True)
-    markup = ReplyKeyboardMarkup([[contact_btn]], resize_keyboard=True, one_time_keyboard=True)
+    btn = KeyboardButton("📞 Kontakt yuborish", request_contact=True)
+    markup = ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
     await update.message.reply_text("Telefon raqamingizni yuboring:", reply_markup=markup)
     return PHONE
 
-
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from sheets import has_voted
     phone = update.message.contact.phone_number
-
     if has_voted(phone):
-        await update.message.reply_text("Siz allaqachon ovoz bergansiz. Rahmat!")
+        await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
     context.user_data["phone"] = phone
@@ -62,8 +55,8 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Qaysi maktabga ovoz bermoqchisiz?", reply_markup=markup)
     return VOTE
 
-
 async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from sheets import add_vote
     user_id = update.effective_user.id
     school = update.message.text
     name = context.user_data["name"]
@@ -72,27 +65,25 @@ async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_vote(name, surname, phone, school)
     user_votes[user_id] = school
-
-    await update.message.reply_text(f"Rahmat! Siz {school} uchun ovoz berdingiz ✅")
+    await update.message.reply_text(f"{school} uchun ovoz berdingiz ✅")
     return ConversationHandler.END
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from sheets import get_stats
     s = get_stats()
-    text = "📊 Hozirgi statistikalar:\n\n"
-    for school, count in s.items():
-        text += f"✅ {school}: {count} ta ovoz\n"
+    text = "📊 Statistikalar:\n\n" + "\n".join(f"{k}: {v} ta" for k, v in s.items())
     await update.message.reply_text(text)
+
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    channel_username = "@bizbop_ovoz"  # o‘zingizning kanal nomingiz
-    user_id = update.effective_user.id
     try:
-        member = await context.bot.get_chat_member(chat_id=channel_username, user_id=user_id)
+        user_id = update.effective_user.id
+        member = await context.bot.get_chat_member("@bizbop_ovoz", user_id)
         return member.status in ["member", "administrator", "creator"]
     except:
         return False
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token("8172116251:AAGjMXhbkNWN74nheVl2lvFKiX7a2zSpEeU").build()
+    app = ApplicationBuilder().token(os.environ["BOT_TOKEN"]).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -107,5 +98,4 @@ if __name__ == "__main__":
 
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("statistika", stats))
-
     app.run_polling()
