@@ -1,14 +1,25 @@
-import os, base64
+import os
+import base64
+from dotenv import load_dotenv
 
-# Faylni doim yozib qo‘yamiz
+# Load .env environment variables (Railway variables)
+load_dotenv()
+
+# Check for base64 string from env
+encoded = os.environ.get("SHEETS_CREDENTIALS_JSON")
+if not encoded:
+    raise RuntimeError("❌ .env dagi SHEETS_CREDENTIALS_JSON topilmadi! Railway > Variables ni tekshiring.")
+
+# Save credentials.json file
 with open("credentials.json", "wb") as f:
-    f.write(base64.b64decode(os.environ["SHEETS_CREDENTIALS_JSON"]))
+    f.write(base64.b64decode(encoded))
 
+# Bot dependencies
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
-
-# 🧠 Sheets importni pasroqda qilamiz (kechiktirib)
-# FUNKSIYALARNING ichida import qilamiz
+from telegram.ext import (
+    ApplicationBuilder, ContextTypes, CommandHandler,
+    MessageHandler, filters, ConversationHandler
+)
 
 schools = [f"Maktab {i}" for i in range(1, 10)]
 user_votes = {}
@@ -16,12 +27,14 @@ user_votes = {}
 NAME, SURNAME, PHONE, VOTE = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from sheets import has_voted  # kechiktirilgan import
+    from sheets import has_voted
     user_id = update.effective_user.id
 
     is_subscribed = await check_subscription(update, context)
     if not is_subscribed:
-        await update.message.reply_text("❗️Avval kanalga a’zo bo‘ling: https://t.me/bizbop_ovoz")
+        await update.message.reply_text(
+            "❗️Ovoz berishdan oldin kanalga a’zo bo‘ling:\n👉 https://t.me/bizbop_ovoz"
+        )
         return ConversationHandler.END
 
     if user_id in user_votes:
@@ -65,13 +78,14 @@ async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_vote(name, surname, phone, school)
     user_votes[user_id] = school
-    await update.message.reply_text(f"{school} uchun ovoz berdingiz ✅")
+
+    await update.message.reply_text(f"✅ Siz {school} uchun ovoz berdingiz. Rahmat!")
     return ConversationHandler.END
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from sheets import get_stats
     s = get_stats()
-    text = "📊 Statistikalar:\n\n" + "\n".join(f"{k}: {v} ta" for k, v in s.items())
+    text = "📊 Statistikalar:\n\n" + "\n".join(f"🏫 {k}: {v} ta ovoz" for k, v in s.items())
     await update.message.reply_text(text)
 
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -83,7 +97,11 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return False
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(os.environ["BOT_TOKEN"]).build()
+    BOT_TOKEN = os.environ.get("BOT_TOKEN")
+    if not BOT_TOKEN:
+        raise RuntimeError("❌ BOT_TOKEN yo‘q! Railway > Variables da qo‘shing.")
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -98,4 +116,5 @@ if __name__ == "__main__":
 
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("statistika", stats))
+
     app.run_polling()
