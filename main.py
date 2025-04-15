@@ -1,7 +1,12 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
 from sheets import add_vote, get_stats, has_voted
+import os
+import base64
 
+if not os.path.exists("credentials.json") and "SHEETS_CREDENTIALS_JSON" in os.environ:
+    with open("credentials.json", "wb") as f:
+        f.write(base64.b64decode(os.environ["SHEETS_CREDENTIALS_JSON"]))
 
 schools = [
     "Maktab 1", "Maktab 2", "Maktab 3", "Maktab 4", "Maktab 5",
