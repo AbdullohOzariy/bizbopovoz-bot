@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Save credentials before importing sheets
+# Load Google Sheets credentials
 encoded = os.environ.get("SHEETS_CREDENTIALS_JSON")
 if not encoded:
     raise RuntimeError("❌ SHEETS_CREDENTIALS_JSON topilmadi!")
@@ -30,13 +30,13 @@ schools = [
     "3-maktab (shahar)", "5-maktab (Yo‘lchilar ovuli)", "12-maktab (Shalxar ovuli)"
 ]
 
-# Conversation bosqichlari
+# Kanallar ro‘yxati
+CHANNEL_IDS = ["@bizbop_supermarket", "@benisonuz"]
+
+# Bosqichlar
 NAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(4)
 
-# Kanal ID (username yoki -100... formatida)
-CHANNEL_ID = "@bizbop_supermarket"  # yoki -100XXXXXXXXXX
 
-# /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     log_start(user.id, user.first_name, user.username)
@@ -45,12 +45,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
-    await update.message.reply_text(
-        "👋 Assalomu alaykum! Bizbop Ovoz botiga xush kelibsiz!\n\nIsmingizni kiriting:"
-    )
+    await update.message.reply_text("👋 Xush kelibsiz!\n\nIsmingizni kiriting:")
     return NAME
 
-# Ism olish
+
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
     btn = KeyboardButton("📞 Kontakt yuborish", request_contact=True)
@@ -58,7 +56,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Telefon raqamingizni yuboring:", reply_markup=markup)
     return PHONE
 
-# Telefon olish
+
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     phone = update.message.contact.phone_number
@@ -69,63 +67,50 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["phone"] = phone
 
-    inline_btn = InlineKeyboardButton("📢 Kanalga a'zo bo‘lish", url="https://t.me/bizbop_supermarket")
+    buttons = [
+        [InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")],
+        [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benisonuz")]
+    ]
     await update.message.reply_text(
-        "📢 Endi kanalga a'zo bo‘ling va pastdagi tugmani bosing:",
-        reply_markup=InlineKeyboardMarkup([[inline_btn]])
+        "📢 Quyidagi kanallarga a’zo bo‘ling:",
+        reply_markup=InlineKeyboardMarkup(buttons)
     )
 
     markup = ReplyKeyboardMarkup([[KeyboardButton("✅ Obuna bo‘ldim")]], resize_keyboard=True, one_time_keyboard=True)
     await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, pastdagi tugmani bosing:", reply_markup=markup)
     return CHECK_SUBSCRIPTION
 
-# A'zolikni tekshirish
+
 async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     try:
-        member1 = await context.bot.get_chat_member(CHANNEL_ID_1, user_id)
-        member2 = await context.bot.get_chat_member(CHANNEL_ID_2, user_id)
+        for channel in CHANNEL_IDS:
+            member = await context.bot.get_chat_member(channel, user_id)
+            if member.status in ("left", "kicked"):
+                raise Exception("Not subscribed")
 
-        status1 = member1.status
-        status2 = member2.status
-
-        if status1 in ("left", "kicked") or status2 in ("left", "kicked"):
-            buttons = []
-            if status1 in ("left", "kicked"):
-                buttons.append([InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")])
-            if status2 in ("left", "kicked"):
-                buttons.append([InlineKeyboardButton("📢 2-kanal", url="https://t.me/bizbop_food")])
-
-            await update.message.reply_text(
-                "❗️Siz hali barcha kerakli kanallarga a'zo emassiz!\nObuna bo‘lib, pastdagi tugmani bosing:",
-                reply_markup=InlineKeyboardMarkup(buttons)
-            )
-
-            markup = ReplyKeyboardMarkup(
-                [[KeyboardButton("✅ Obuna bo‘ldim")]],
-                resize_keyboard=True,
-                one_time_keyboard=True
-            )
-            await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, tugmani bosing:", reply_markup=markup)
-            return CHECK_SUBSCRIPTION
-
-        # Agar ikkalasiga a’zo bo‘lgan bo‘lsa
         markup = ReplyKeyboardMarkup(
             [schools[i:i + 3] for i in range(0, len(schools), 3)],
             resize_keyboard=True,
             one_time_keyboard=True
         )
-        await update.message.reply_text(
-            "✅ Ikkala kanalga ham obuna tasdiqlandi!\nEndi ovoz bering:",
-            reply_markup=markup
-        )
+        await update.message.reply_text("✅ Obuna tasdiqlandi! Endi ovoz bering:", reply_markup=markup)
         return VOTE
 
-    except Exception:
-        await update.message.reply_text("⚠️ Obuna tekshiruvida xatolik yuz berdi. Iltimos, qaytadan urinib ko‘ring.")
+    except:
+        buttons = [
+            [InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")],
+            [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benisonuz")]
+        ]
+        await update.message.reply_text(
+            "❗️Hali barcha kanallarga a'zo emassiz!",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+        markup = ReplyKeyboardMarkup([[KeyboardButton("✅ Obuna bo‘ldim")]], resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, tugmani bosing:", reply_markup=markup)
         return CHECK_SUBSCRIPTION
 
-# Ovoz berish
+
 async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     school = update.message.text
@@ -135,24 +120,23 @@ async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_vote(name, phone, school, user_id)
 
     await update.message.reply_text(
-        f"✅ Siz {school} uchun muvaffaqiyatli ovoz berdingiz!\n\n📊 Natijalarni quyidagi tugma orqali ko‘rishingiz mumkin:",
+        f"✅ Siz {school} uchun muvaffaqiyatli ovoz berdingiz!\n\n📊 Statistikani ko‘rish uchun pastdagi tugmani bosing:",
         reply_markup=ReplyKeyboardMarkup([["📊 Statistika"]], resize_keyboard=True, one_time_keyboard=True)
     )
     return ConversationHandler.END
 
-# Statistika
+
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chart_path = generate_stats_chart()
     with open(chart_path, "rb") as img:
         await update.message.reply_photo(img, caption="📊 Maktablar bo‘yicha ovozlar")
 
-# Stop komandasi
+
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    log_exit(user_id)
+    log_exit(update.effective_user.id)
     await update.message.reply_text("❌ Botdan chiqdingiz. Rahmat!")
 
-# Run bot
+
 if __name__ == "__main__":
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
     if not BOT_TOKEN:
