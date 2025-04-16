@@ -69,7 +69,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     buttons = [
         [InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")],
-        [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benisonuz")]
+        [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benison_uz")]
     ]
     await update.message.reply_text(
         "📢 Quyidagi kanallarga a’zo bo‘ling:",
@@ -100,7 +100,7 @@ async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_
     except:
         buttons = [
             [InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")],
-            [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benisonuz")]
+            [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benison_uz")]
         ]
         await update.message.reply_text(
             "❗️Hali barcha kanallarga a'zo emassiz!",
