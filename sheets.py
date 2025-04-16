@@ -1,31 +1,3 @@
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Google Sheetsga ulanish
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-client = gspread.authorize(creds)
-
-sheet = client.open("BizbopOvoz").worksheet("Votes")
-
-def has_voted(user_id):
-    ids = sheet.col_values(1)[1:]
-    return str(user_id) in ids
-
-def add_vote(name, phone, school, user_id):
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    sheet.append_row([str(user_id), name, phone, school, now])
-
-def get_stats():
-    data = sheet.col_values(4)[1:]  # D ustun: Maktab
-    stats = {}
-    for school in data:
-        stats[school] = stats.get(school, 0) + 1
-    return stats
-
 def generate_stats_chart(path="stats_chart.png"):
     stats = get_stats()
     sorted_stats = dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
@@ -34,45 +6,39 @@ def generate_stats_chart(path="stats_chart.png"):
     total_votes = sum(counts)
     top_school = labels[0]
     top_votes = counts[0]
+    active_users = len(set(sheet.col_values(1)[1:]))
 
-    user_ids = sheet.col_values(1)[1:]
-    active_users = len(set(user_ids))
+    colors = ['#81C784' if s == top_school else '#64B5F6' for s in labels]
 
-    colors = []
-    for school in labels:
-        if school == top_school:
-            colors.append("#2E7D32")  # yashil — eng ko‘p ovoz
-        else:
-            colors.append("#4F9EC4")  # oddiy ko‘k
-
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 6), dpi=150)
     ax = plt.gca()
-    ax.set_facecolor("#f5f5f5")  # fon rangi
+    ax.set_facecolor("#f9f9f9")
 
-    bars = plt.bar(labels, counts, color=colors, edgecolor="black")
+    bars = plt.bar(labels, counts, color=colors, edgecolor="#444", width=0.6)
 
     for bar, count in zip(bars, counts):
         percent = f"{(count / total_votes) * 100:.1f}%"
-        text = f"{count}\n({percent})"
-        plt.text(bar.get_x() + bar.get_width() / 2, count + 0.4, text,
+        label = f"{count} ta\n({percent})"
+        plt.text(bar.get_x() + bar.get_width() / 2, count + 0.3, label,
                  ha='center', va='bottom', fontsize=9, fontweight='bold')
 
-    # Sarlavha va taglavha
-    plt.title("📊 Maktablar bo‘yicha ovozlar statistikasi", fontsize=14, fontweight='bold')
-    plt.suptitle(f"🏆 Eng ko‘p ovoz olgan: {top_school} ({top_votes} ta) | Umumiy: {total_votes} ta ovoz",
-                 fontsize=10, color='gray', y=0.93)
+    # Sarlavha
+    plt.title("📊 Maktablar bo‘yicha ovozlar statistikasi", fontsize=15, fontweight='bold', color="#222")
+    plt.suptitle(f"🏆 Eng ko‘p ovoz: {top_school} ({top_votes} ta)   |   Umumiy: {total_votes} ta ovoz",
+                 fontsize=10, y=0.93, color="#555")
 
-    # Pastki burchakdagi faol foydalanuvchilar
+    # Faol foydalanuvchilar soni
     plt.annotate(f"👤 Faol foydalanuvchilar: {active_users}",
-                 xy=(1, 0), xycoords='axes fraction',
-                 fontsize=8, color="#444", ha='right', va='bottom', alpha=0.8)
+                 xy=(1, 0.01), xycoords='axes fraction',
+                 ha='right', va='bottom', fontsize=8, color="#777", alpha=0.8)
 
+    # O‘qlar
     plt.xlabel("Maktablar", fontsize=11)
     plt.ylabel("Ovozlar soni", fontsize=11)
     plt.xticks(rotation=30, ha="right")
-    plt.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
-    plt.subplots_adjust(bottom=0.2)
+    plt.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.4)
+
     plt.tight_layout()
-    plt.savefig(path, dpi=150)
+    plt.savefig(path, bbox_inches='tight', transparent=False)
     plt.close()
     return path
