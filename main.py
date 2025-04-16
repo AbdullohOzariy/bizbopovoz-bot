@@ -20,7 +20,18 @@ from telegram.ext import (
     MessageHandler, filters, ConversationHandler
 )
 
-schools = [f"Maktab {i}" for i in range(1, 10)]
+schools = [
+    "18-maktab (shahar)",
+    "10-maktab (shahar)",
+    "7-maktab (shahar)",
+    "20-maktab (shahar)",
+    "9-maktab (shahar)",
+    "4-maktab (shahar)",
+    "3-maktab (shahar)",
+    "5-maktab (Yo‘lchilar ovuli)",
+    "12-maktab (Shalxar ovuli)"
+]
+
 user_votes = {}
 
 NAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(4)
@@ -83,7 +94,10 @@ async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_
             resize_keyboard=True,
             one_time_keyboard=True
         )
-        await update.message.reply_text("✅ Obuna tasdiqlandi! Endi qaysi maktabga ovoz bermoqchisiz?", reply_markup=markup)
+        await update.message.reply_text(
+            "✅ Obuna tasdiqlandi! Bizbop maktab maqomi uchun o‘z ovozingizni bering 👇🏼👇🏼",
+            reply_markup=markup
+        )
         return VOTE
 
     except:
