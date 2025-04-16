@@ -45,7 +45,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
-    await update.message.reply_text("👋 Xush kelibsiz!\n\nIsmingizni kiriting:")
+    await update.message.reply_text("👋 Assalomu alaykum! Bizbop Ovoz botiga xush kelibsiz! \n\nIsmingizni kiriting:")
     return NAME
 
 
