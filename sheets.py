@@ -1,6 +1,8 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Google Sheetsga ulanish
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -24,30 +26,45 @@ def get_stats():
         stats[school] = stats.get(school, 0) + 1
     return stats
 
-import matplotlib.pyplot as plt
-
 def generate_stats_chart(path="stats_chart.png"):
     stats = get_stats()
-    labels = list(stats.keys())
-    counts = list(stats.values())
+    sorted_stats = dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
+    labels = list(sorted_stats.keys())
+    counts = list(sorted_stats.values())
     total_votes = sum(counts)
+    top_school, top_votes = labels[0], counts[0]
+
+    # Faol foydalanuvchilar soni (unique user_id)
+    user_ids = sheet.col_values(1)[1:]
+    active_users = len(set(user_ids))
+
+    # Rangli ustunlar
+    colors = plt.cm.Blues(np.linspace(0.5, 0.9, len(stats)))
 
     plt.figure(figsize=(12, 6))
-    bars = plt.bar(labels, counts, color="#4F9EC4", edgecolor="black")
+    bars = plt.bar(labels, counts, color=colors, edgecolor="black")
 
-    for bar in bars:
-        height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2, height + 0.3, str(height),
-                 ha='center', va='bottom', fontsize=10, fontweight='bold')
+    # Bar ustiga foiz va son yozuvi
+    for bar, count in zip(bars, counts):
+        percent = f"{(count / total_votes) * 100:.1f}%"
+        plt.text(bar.get_x() + bar.get_width() / 2, count + 0.5,
+                 f"{count} ({percent})", ha='center', va='bottom',
+                 fontsize=9, fontweight='bold')
 
-    plt.title("📊 Maktablar bo‘yicha ovozlar statistikasi", fontsize=14, fontweight='bold')
-    plt.suptitle(f"Umumiy ovozlar soni: {total_votes}", fontsize=10, y=0.92, color='gray')
+    # Sarlavha
+    plt.title(f"🏆 Eng ko‘p ovoz: {top_school} ({top_votes} ta)", fontsize=14, fontweight='bold', color="#2E7D32")
+    plt.suptitle(f"📊 Umumiy ovozlar soni: {total_votes}", fontsize=10, y=0.92, color='gray')
 
-    plt.xlabel("Maktablar", fontsize=12)
-    plt.ylabel("Ovozlar soni", fontsize=12)
+    # Pastki burchakka foydalanuvchilar soni
+    plt.annotate(f"👤 Faol foydalanuvchilar: {active_users}",
+                 xy=(1, 0), xycoords='axes fraction',
+                 fontsize=7, color="gray", ha='right', va='bottom', alpha=0.6)
+
+    plt.xlabel("Maktablar", fontsize=11)
+    plt.ylabel("Ovozlar soni", fontsize=11)
     plt.xticks(rotation=30, ha="right")
-    plt.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.7)
+    plt.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
     plt.tight_layout()
-    plt.savefig(path)
+    plt.savefig(path, dpi=150)
     plt.close()
     return path
