@@ -20,6 +20,8 @@ from telegram.ext import (
     MessageHandler, filters, ConversationHandler
 )
 
+from sheets import log_start, log_exit
+
 schools = [
     "18-maktab (shahar)",
     "10-maktab (shahar)",
@@ -37,9 +39,10 @@ user_votes = {}
 NAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+    user = update.effective_user
+    log_start(user.id, user.first_name, user.username)
 
-    if user_id in user_votes:
+    if user.id in user_votes:
         await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
@@ -66,7 +69,6 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["phone"] = phone
 
-    # Kanalga kirish uchun inline tugma
     inline_btn = InlineKeyboardButton("📢 Kanalga a'zo bo‘lish", url="https://t.me/bizbop_supermarket")
     inline_markup = InlineKeyboardMarkup([[inline_btn]])
     await update.message.reply_text(
@@ -85,7 +87,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     try:
-        member = await context.bot.get_chat_member("@BozorovPersonal", user_id)
+        member = await context.bot.get_chat_member("https://t.me/bizbop_supermarket", user_id)
         if member.status not in ["member", "administrator", "creator"]:
             raise Exception("Not subscribed")
 
@@ -104,7 +106,7 @@ async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_
         btn = KeyboardButton("✅ Obuna bo‘ldim")
         markup = ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(
-            "❗️Siz hali kanalga a'zo emassiz!\n👉 https://t.me/BozorovPersonal\n\nA'zo bo‘lib, pastdagi tugmani bosing:",
+            "❗️Siz hali kanalga a'zo emassiz!\n👉 https://t.me/bizbop_supermarket\n\nA'zo bo‘lib, pastdagi tugmani bosing:",
             reply_markup=markup
         )
         return CHECK_SUBSCRIPTION
@@ -131,6 +133,11 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with open(chart_path, "rb") as img:
         await update.message.reply_photo(img, caption="📊 Maktablar bo‘yicha ovozlar")
 
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    log_exit(user_id)
+    await update.message.reply_text("❌ Siz botdan chiqdingiz. Rahmat!")
+
 if __name__ == "__main__":
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
     if not BOT_TOKEN:
@@ -152,5 +159,6 @@ if __name__ == "__main__":
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("statistika", stats))
     app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📊 Statistika$"), stats))
+    app.add_handler(CommandHandler("stop", stop))
 
     app.run_polling()

@@ -3,6 +3,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+from datetime import datetime
+from zoneinfo import ZoneInfo  # Python 3.9+
+
 
 # Google Sheetsga ulanish
 scope = [
@@ -18,9 +21,8 @@ def has_voted(user_id):
     ids = sheet.col_values(1)[1:]  # A ustun: user_id
     return str(user_id) in ids
 
-
 def add_vote(name, phone, school, user_id):
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    now = datetime.now(ZoneInfo("Asia/Tashkent")).strftime('%Y-%m-%d %H:%M:%S')
     sheet.append_row([str(user_id), name, phone, school, now])
 
 
@@ -80,3 +82,21 @@ def generate_stats_chart(path="stats_chart.png"):
     plt.savefig(path, bbox_inches='tight')
     plt.close()
     return path
+def log_start(user_id, first_name, username):
+    log_sheet = client.open("BizbopOvoz").worksheet("Log")
+    all_ids = log_sheet.col_values(1)
+
+    time = datetime.now(ZoneInfo("Asia/Tashkent")).strftime('%Y-%m-%d %H:%M:%S')
+    username = username or "-"
+
+    if str(user_id) in all_ids:
+        row_index = all_ids.index(str(user_id)) + 1
+        log_sheet.update(f"C{row_index}:D{row_index}", [["active", time]])
+    else:
+        log_sheet.append_row([str(user_id), first_name, "active", time])
+def log_exit(user_id):
+    log_sheet = client.open("BizbopOvoz").worksheet("Log")
+    all_ids = log_sheet.col_values(1)
+    if str(user_id) in all_ids:
+        row_index = all_ids.index(str(user_id)) + 1
+        log_sheet.update_acell(f"C{row_index}", "inactive")
