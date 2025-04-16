@@ -83,8 +83,8 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     try:
-        member1 = await context.bot.get_chat_member(CHANNEL_ID_1, user_id)
-        member2 = await context.bot.get_chat_member(CHANNEL_ID_2, user_id)
+        member1 = await context.bot.get_chat_member("https://t.me/bizbop_supermarket", user_id)
+        member2 = await context.bot.get_chat_member("https://t.me/benisonuz", user_id)
 
         if member1.status in ("left", "kicked") or member2.status in ("left", "kicked"):
             raise Exception("Not subscribed")
