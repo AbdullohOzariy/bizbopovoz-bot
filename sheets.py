@@ -1,3 +1,31 @@
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Google Sheetsga ulanish
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+client = gspread.authorize(creds)
+
+sheet = client.open("BizbopOvoz").worksheet("Votes")
+
+def has_voted(user_id):
+    ids = sheet.col_values(1)[1:]
+    return str(user_id) in ids
+
+def add_vote(name, phone, school, user_id):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    sheet.append_row([str(user_id), name, phone, school, now])
+
+def get_stats():
+    data = sheet.col_values(4)[1:]  # D ustun: Maktab
+    stats = {}
+    for school in data:
+        stats[school] = stats.get(school, 0) + 1
+    return stats
+
 def generate_stats_chart(path="stats_chart.png"):
     stats = get_stats()
     sorted_stats = dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
