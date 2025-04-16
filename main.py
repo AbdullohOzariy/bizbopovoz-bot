@@ -44,7 +44,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     await update.message.reply_text(
-        "👋 Assalomu alaykum! Bizbop Ovoz botiga xush kelibsiz!\n\nOvoz berish uchun avval ismingizni kiriting:"
+        "👋 Assalomu alaykum! Bizbop Ovoz botiga xush kelibsiz! 😉\n\nOvoz berish uchun Ismingizni kiriting:"
     )
     return NAME
 
@@ -67,7 +67,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["phone"] = phone
 
     # Kanalga kirish uchun inline tugma
-    inline_btn = InlineKeyboardButton("📢 Kanalga a'zo bo‘lish", url="https://t.me/BozorovPersonal")
+    inline_btn = InlineKeyboardButton("📢 Kanalga a'zo bo‘lish", url="https://t.me/bizbop_supermarket")
     inline_markup = InlineKeyboardMarkup([[inline_btn]])
     await update.message.reply_text(
         "📢 Endi bizning kanalga a'zo bo‘ling:\n👇 Quyidagi tugmani bosing:",
