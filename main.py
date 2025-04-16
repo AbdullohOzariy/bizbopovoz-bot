@@ -83,8 +83,10 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     try:
-        member = await context.bot.get_chat_member(CHANNEL_ID, user_id)
-        if member.status in ("left", "kicked"):
+        member1 = await context.bot.get_chat_member(CHANNEL_ID_1, user_id)
+        member2 = await context.bot.get_chat_member(CHANNEL_ID_2, user_id)
+
+        if member1.status in ("left", "kicked") or member2.status in ("left", "kicked"):
             raise Exception("Not subscribed")
 
         markup = ReplyKeyboardMarkup(
@@ -93,17 +95,22 @@ async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_
             one_time_keyboard=True
         )
         await update.message.reply_text(
-            "✅ Obuna tasdiqlandi!\nEndi o‘z ovozingizni bering:",
+            "✅ Ikkala kanalda ham obuna tasdiqlandi!\nEndi ovoz bering:",
             reply_markup=markup
         )
         return VOTE
 
     except Exception:
+        inline_markup = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")],
+            [InlineKeyboardButton("📢 2-kanal", url="https://t.me/bizbop_food")]
+        ])
         markup = ReplyKeyboardMarkup([[KeyboardButton("✅ Obuna bo‘ldim")]], resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text(
-            "❗️Siz hali kanalga a'zo emassiz!\n👉 https://t.me/bizbop_supermarket\n\nA'zo bo‘lib, tugmani bosing:",
-            reply_markup=markup
+            "❗️Siz hali barcha kanallarga a'zo emassiz!\n\nIkkala kanalda ham obuna bo‘lib, pastdagi tugmani bosing:",
+            reply_markup=inline_markup
         )
+        await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, tugmani bosing:", reply_markup=markup)
         return CHECK_SUBSCRIPTION
 
 # Ovoz berish
