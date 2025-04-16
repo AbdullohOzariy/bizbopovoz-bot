@@ -31,7 +31,7 @@ schools = [
 ]
 
 # Kanallar ro‘yxati
-CHANNEL_IDS = ["@bizbop_supermarket", "@benisonuz"]
+CHANNEL_IDS = ["@bizbop_supermarket", "@benison_uz"]
 
 # Bosqichlar
 NAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(4)
