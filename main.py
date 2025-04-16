@@ -46,9 +46,10 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from sheets import has_voted
+    user_id = update.effective_user.id
     phone = update.message.contact.phone_number
 
-    if has_voted(phone):
+    if has_voted(user_id):
         await update.message.reply_text("❗️Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
@@ -101,7 +102,7 @@ async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = context.user_data["name"]
     phone = context.user_data["phone"]
 
-    add_vote(name, "-", phone, school)
+    add_vote(name, phone, school, user_id)
     user_votes[user_id] = school
 
     await update.message.reply_text(
