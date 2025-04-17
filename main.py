@@ -1,6 +1,7 @@
 import os
 import base64
 from dotenv import load_dotenv
+import re
 
 # Load environment variables
 load_dotenv()
@@ -36,7 +37,6 @@ CHANNEL_IDS = ["@bizbop_supermarket", "@benison_uz"]
 # Bosqichlar
 NAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(4)
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     log_start(user.id, user.first_name, user.username)
@@ -48,14 +48,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("👋 Assalomu alaykum! Bizbop Ovoz botiga xush kelibsiz! \n\nIsmingizni kiriting:")
     return NAME
 
-
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
     btn = KeyboardButton("📞 Kontakt yuborish", request_contact=True)
     markup = ReplyKeyboardMarkup([[btn]], resize_keyboard=True, one_time_keyboard=True)
     await update.message.reply_text("Telefon raqamingizni yuboring:", reply_markup=markup)
     return PHONE
-
 
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -79,7 +77,6 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     markup = ReplyKeyboardMarkup([[KeyboardButton("✅ Obuna bo‘ldim")]], resize_keyboard=True, one_time_keyboard=True)
     await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, pastdagi tugmani bosing:", reply_markup=markup)
     return CHECK_SUBSCRIPTION
-
 
 async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -110,7 +107,6 @@ async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, tugmani bosing:", reply_markup=markup)
         return CHECK_SUBSCRIPTION
 
-
 async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     school = update.message.text
@@ -125,17 +121,17 @@ async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
+async def invalid_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("❌ Iltimos, pastdagi tugmalardan birini tanlang. Matn yozish orqali ovoz berib bo‘lmaydi.")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chart_path = generate_stats_chart()
     with open(chart_path, "rb") as img:
         await update.message.reply_photo(img, caption="📊 Maktablar bo‘yicha ovozlar")
 
-
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_exit(update.effective_user.id)
     await update.message.reply_text("❌ Botdan chiqdingiz. Rahmat!")
-
 
 if __name__ == "__main__":
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -150,7 +146,10 @@ if __name__ == "__main__":
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
             PHONE: [MessageHandler(filters.CONTACT, get_phone)],
             CHECK_SUBSCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, check_subscription_step)],
-            VOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_vote)],
+            VOTE: [
+                MessageHandler(filters.TEXT & filters.Regex(f"^({'|'.join(map(re.escape, schools))})$"), get_vote),
+                MessageHandler(filters.TEXT, invalid_vote)
+            ]
         },
         fallbacks=[CommandHandler("stop", stop)]
     )
