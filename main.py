@@ -30,10 +30,7 @@ schools = [
     "3-maktab (shahar)", "5-maktab (Yo‘lchilar ovuli)", "12-maktab (Shalxar ovuli)"
 ]
 
-# Kanallar ro‘yxati
 CHANNEL_IDS = ["@bizbop_supermarket", "@benison_uz"]
-
-# Bosqichlar
 NAME, PHONE, CHECK_SUBSCRIPTION, VOTE = range(4)
 
 
@@ -45,7 +42,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Siz allaqachon ovoz bergansiz.")
         return ConversationHandler.END
 
-    await update.message.reply_text("👋 Assalomu alaykum! Bizbop Ovoz botiga xush kelibsiz! \n\nIsmingizni kiriting:")
+    await update.message.reply_text("👋 Assalomu alaykum! Ismingizni kiriting:")
     return NAME
 
 
@@ -71,13 +68,10 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")],
         [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benison_uz")]
     ]
-    await update.message.reply_text(
-        "📢 Quyidagi kanallarga a’zo bo‘ling:",
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    await update.message.reply_text("📢 Quyidagi kanallarga a’zo bo‘ling:", reply_markup=InlineKeyboardMarkup(buttons))
 
     markup = ReplyKeyboardMarkup([[KeyboardButton("✅ Obuna bo‘ldim")]], resize_keyboard=True, one_time_keyboard=True)
-    await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, pastdagi tugmani bosing:", reply_markup=markup)
+    await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, tugmani bosing:", reply_markup=markup)
     return CHECK_SUBSCRIPTION
 
 
@@ -89,38 +83,28 @@ async def check_subscription_step(update: Update, context: ContextTypes.DEFAULT_
             if member.status in ("left", "kicked"):
                 raise Exception("Not subscribed")
 
-        markup = ReplyKeyboardMarkup(
-            [schools[i:i + 3] for i in range(0, len(schools), 3)],
-            resize_keyboard=True,
-            one_time_keyboard=True
-        )
+        markup = ReplyKeyboardMarkup([schools[i:i + 3] for i in range(0, len(schools), 3)],
+                                     resize_keyboard=True, one_time_keyboard=True)
         await update.message.reply_text("✅ Obuna tasdiqlandi! Endi ovoz bering:", reply_markup=markup)
         return VOTE
 
-    except:
-        buttons = [
-            [InlineKeyboardButton("📢 1-kanal", url="https://t.me/bizbop_supermarket")],
-            [InlineKeyboardButton("📢 2-kanal", url="https://t.me/benison_uz")]
-        ]
-        await update.message.reply_text(
-            "❗️Hali barcha kanallarga a'zo emassiz!",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+    except Exception:
+        await update.message.reply_text("❗️Hali barcha kanallarga a'zo emassiz!")
         markup = ReplyKeyboardMarkup([[KeyboardButton("✅ Obuna bo‘ldim")]], resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text("✅ Obuna bo‘lib bo‘lsangiz, tugmani bosing:", reply_markup=markup)
+        await update.message.reply_text("❗️Qayta urinib ko‘ring:", reply_markup=markup)
         return CHECK_SUBSCRIPTION
 
 
 async def get_vote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     school = update.message.text
-    name = context.user_data["name"]
-    phone = context.user_data["phone"]
+    name = context.user_data.get("name", "Nomaʼlum")
+    phone = context.user_data.get("phone", "Nomaʼlum")
 
     add_vote(name, phone, school, user_id)
 
     await update.message.reply_text(
-        f"✅ Siz {school} uchun muvaffaqiyatli ovoz berdingiz!\n\n📊 Statistikani ko‘rish uchun pastdagi tugmani bosing:",
+        f"✅ Siz {school} uchun muvaffaqiyatli ovoz berdingiz!\n\n📊 Statistikani ko‘rish uchun tugmani bosing:",
         reply_markup=ReplyKeyboardMarkup([["📊 Statistika"]], resize_keyboard=True, one_time_keyboard=True)
     )
     return ConversationHandler.END
@@ -157,7 +141,7 @@ if __name__ == "__main__":
 
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("statistika", stats))
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📊 Statistika$"), stats))
+    app.add_handler(MessageHandler(filters.Regex("(?i)^📊 Statistika$"), stats))
     app.add_handler(CommandHandler("stop", stop))
 
     app.run_polling()

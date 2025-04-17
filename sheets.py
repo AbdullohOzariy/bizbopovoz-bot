@@ -1,10 +1,9 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import datetime
-from zoneinfo import ZoneInfo  # Python 3.9+
 
 
 # Google Sheetsga ulanish
@@ -18,24 +17,38 @@ sheet = client.open("BizbopOvoz").worksheet("Votes")
 
 
 def has_voted(user_id):
-    ids = sheet.col_values(1)[1:]  # A ustun: user_id
-    return str(user_id) in ids
+    try:
+        sheet.find(str(user_id))
+        return True
+    except gspread.exceptions.CellNotFound:
+        return False
+
 
 def add_vote(name, phone, school, user_id):
     now = datetime.now(ZoneInfo("Asia/Tashkent")).strftime('%Y-%m-%d %H:%M:%S')
-    sheet.append_row([str(user_id), name, phone, school, now])
+    sheet.append_row([str(user_id), name.strip(), phone.strip(), school.strip(), now])
 
 
 def get_stats():
-    data = sheet.col_values(4)[1:]  # D ustun: maktab nomlari
+    data = sheet.col_values(4)[1:]  # D ustun: maktab
     stats = {}
     for school in data:
-        stats[school] = stats.get(school, 0) + 1
+        school = school.strip()
+        if school:
+            stats[school] = stats.get(school, 0) + 1
     return stats
 
 
 def generate_stats_chart(path="stats_chart.png"):
     stats = get_stats()
+    if not stats:
+        plt.figure()
+        plt.text(0.5, 0.5, "Hozircha hech qanday ovoz yo'q!", ha='center', va='center', fontsize=12)
+        plt.axis('off')
+        plt.savefig(path)
+        plt.close()
+        return path
+
     sorted_stats = dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
     labels = list(sorted_stats.keys())
     counts = list(sorted_stats.values())
@@ -44,10 +57,8 @@ def generate_stats_chart(path="stats_chart.png"):
     top_votes = counts[0]
     active_users = len(set(sheet.col_values(1)[1:]))
 
-    # Ranglar
     colors = ['#388E3C' if s == top_school else '#64B5F6' for s in labels]
 
-    # Grafik sozlamalari
     plt.figure(figsize=(12, 6), dpi=150)
     ax = plt.gca()
     ax.set_facecolor("#f9f9f9")
@@ -60,19 +71,16 @@ def generate_stats_chart(path="stats_chart.png"):
         plt.text(bar.get_x() + bar.get_width() / 2, count + 0.3, label,
                  ha='center', va='bottom', fontsize=9, fontweight='bold')
 
-    # Sarlavha va izoh
     plt.title("📊 Maktablar bo‘yicha ovozlar statistikasi",
               fontsize=15, fontweight='bold', color="#222")
 
     plt.suptitle(f"🏆 Eng ko‘p ovoz olgan: {top_school} ({top_votes} ta)   |   Umumiy: {total_votes} ta ovoz",
                  fontsize=10, y=0.93, color="#555")
 
-    # Faol foydalanuvchilar soni past burchakda
     plt.annotate(f"👤 Faol foydalanuvchilar: {active_users}",
                  xy=(1, 0.01), xycoords='axes fraction',
                  ha='right', va='bottom', fontsize=8, color="#777", alpha=0.75)
 
-    # O‘qlar
     plt.xlabel("Maktablar", fontsize=11)
     plt.ylabel("Ovozlar soni", fontsize=11)
     plt.xticks(rotation=30, ha="right")
@@ -82,21 +90,23 @@ def generate_stats_chart(path="stats_chart.png"):
     plt.savefig(path, bbox_inches='tight')
     plt.close()
     return path
+
+
 def log_start(user_id, first_name, username):
     log_sheet = client.open("BizbopOvoz").worksheet("Log")
     all_ids = log_sheet.col_values(1)
-
     time = datetime.now(ZoneInfo("Asia/Tashkent")).strftime('%Y-%m-%d %H:%M:%S')
     username = username or "-"
-
     if str(user_id) in all_ids:
         row_index = all_ids.index(str(user_id)) + 1
         log_sheet.update(f"C{row_index}:D{row_index}", [["active", time]])
     else:
-        log_sheet.append_row([str(user_id), first_name, "active", time])
+        log_sheet.append_row([str(user_id), first_name, username, "active", time])
+
+
 def log_exit(user_id):
     log_sheet = client.open("BizbopOvoz").worksheet("Log")
     all_ids = log_sheet.col_values(1)
     if str(user_id) in all_ids:
         row_index = all_ids.index(str(user_id)) + 1
-        log_sheet.update_acell(f"C{row_index}", "inactive")
+        log_sheet.update(f"C{row_index}", "inactive")
