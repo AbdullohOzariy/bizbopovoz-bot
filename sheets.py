@@ -60,4 +60,43 @@ def generate_stats_chart(path="stats_chart.png"):
         plt.text(bar.get_x() + bar.get_width() / 2, count + 0.3, label,
                  ha='center', va='bottom', fontsize=9, fontweight='bold')
 
-4
+    # Sarlavha va izoh
+    plt.title("📊 Maktablar bo‘yicha ovozlar statistikasi",
+              fontsize=15, fontweight='bold', color="#222")
+
+    plt.suptitle(f"🏆 Eng ko‘p ovoz olgan: {top_school} ({top_votes} ta)   |   Umumiy: {total_votes} ta ovoz",
+                 fontsize=10, y=0.93, color="#555")
+
+    # Faol foydalanuvchilar soni past burchakda
+    plt.annotate(f"👤 Faol foydalanuvchilar: {active_users}",
+                 xy=(1, 0.01), xycoords='axes fraction',
+                 ha='right', va='bottom', fontsize=8, color="#777", alpha=0.75)
+
+    # O‘qlar
+    plt.xlabel("Maktablar", fontsize=11)
+    plt.ylabel("Ovozlar soni", fontsize=11)
+    plt.xticks(rotation=30, ha="right")
+    plt.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.4)
+
+    plt.tight_layout()
+    plt.savefig(path, bbox_inches='tight')
+    plt.close()
+    return path
+def log_start(user_id, first_name, username):
+    log_sheet = client.open("BizbopOvoz").worksheet("Log")
+    all_ids = log_sheet.col_values(1)
+
+    time = datetime.now(ZoneInfo("Asia/Tashkent")).strftime('%Y-%m-%d %H:%M:%S')
+    username = username or "-"
+
+    if str(user_id) in all_ids:
+        row_index = all_ids.index(str(user_id)) + 1
+        log_sheet.update(f"C{row_index}:D{row_index}", [["active", time]])
+    else:
+        log_sheet.append_row([str(user_id), first_name, "active", time])
+def log_exit(user_id):
+    log_sheet = client.open("BizbopOvoz").worksheet("Log")
+    all_ids = log_sheet.col_values(1)
+    if str(user_id) in all_ids:
+        row_index = all_ids.index(str(user_id)) + 1
+        log_sheet.update_acell(f"C{row_index}", "inactive")
